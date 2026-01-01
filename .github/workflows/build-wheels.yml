@@ -121,7 +121,8 @@ jobs:
           # Extra flags for Windows to prevent Fortran compiler search
           EXTRA_FLAGS=""
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            EXTRA_FLAGS="-DCMAKE_DISABLE_FIND_PACKAGE_BLAS=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_LAPACK=TRUE"
+            # Tell CMake that Fortran compiler is explicitly not found
+            EXTRA_FLAGS="-DCMAKE_Fortran_COMPILER=CMAKE_Fortran_COMPILER-NOTFOUND"
           fi
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
