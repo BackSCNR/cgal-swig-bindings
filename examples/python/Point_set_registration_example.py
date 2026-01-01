@@ -24,6 +24,7 @@ from CGAL.CGAL_Kernel import Point_3
 import math
 import random
 
+
 def create_bunny_shape(num_points=500):
     """Create a simple bunny-like shape with synthetic points"""
     ps = Point_set_3()
@@ -72,6 +73,7 @@ def create_bunny_shape(num_points=500):
 
     return ps
 
+
 def apply_transformation(ps, tx=0, ty=0, tz=0, angle=0):
     """Apply translation and rotation to a copy of the point set"""
     # Create a copy by inserting points into a new point set
@@ -98,6 +100,7 @@ def apply_transformation(ps, tx=0, ty=0, tz=0, angle=0):
         ps_copy.insert(Point_3(x_final, y_final, z_final))
 
     return ps_copy
+
 
 # =============================================================================
 # Example 1: OpenGR Registration (Super4PCS algorithm)
