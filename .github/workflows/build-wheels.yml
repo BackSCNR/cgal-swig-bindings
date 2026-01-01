@@ -112,7 +112,10 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
             -DBUILD_TESTING=OFF \
             -DEIGEN_BUILD_DOC=OFF \
-            -DEIGEN_BUILD_PKGCONFIG=OFF
+            -DEIGEN_BUILD_PKGCONFIG=OFF \
+            -DEIGEN_BUILD_BLAS=OFF \
+            -DEIGEN_BUILD_LAPACK=OFF \
+            -DEIGEN_TEST_NOQT=ON
           cmake --install . --config Release
           cd ../../..
 
