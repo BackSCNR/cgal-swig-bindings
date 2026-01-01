@@ -20,7 +20,7 @@ echo "Parallel jobs: $PAR_JOBS"
 cd /cgal-bindings
 
 # Install build dependencies
-yum install -y wget tar bzip2
+yum install -y wget tar bzip2 gmp-devel mpfr-devel
 
 # Install Boost 1.82.0 from source (yum version 1.53 is too old)
 echo "=== Building Boost 1.82.0 ==="
