@@ -37,7 +37,9 @@ jobs:
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             PAR_JOBS=$NUMBER_OF_PROCESSORS
             # Normalize path to forward slashes for CMake on Windows
-            echo "INSTALL_DIR=$(cygpath -m ${{ github.workspace }}/external/install)" >> $GITHUB_ENV
+            # Use single quotes to prevent backslash interpretation by bash
+            WS_PATH=$(cygpath -m '${{ github.workspace }}')
+            echo "INSTALL_DIR=${WS_PATH}/external/install" >> $GITHUB_ENV
           elif [[ "$OSTYPE" == "darwin"* ]]; then
             PAR_JOBS=$(sysctl -n hw.logicalcpu)
             echo "INSTALL_DIR=${{ github.workspace }}/external/install" >> $GITHUB_ENV
@@ -64,9 +66,15 @@ jobs:
       - name: Install conda dependencies
         shell: bash -l {0}
         run: |
+          # Install yaml-cpp via conda on Linux/Windows (macOS builds from source)
+          yaml_pkg=""
+          if [[ "${{ runner.os }}" != "macOS" ]]; then
+            yaml_pkg="yaml-cpp"
+          fi
+
           conda install -y -c conda-forge boost-cpp zlib eigen mpfr numpy \
             twine delocate pycodestyle swig tbb tbb-devel wheel bzip2 \
-            gmp cmake
+            gmp cmake $yaml_pkg
 
       - name: Install system dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -139,6 +147,7 @@ jobs:
           cd ../../..
 
       - name: Build yaml-cpp from source
+        if: runner.os == 'macOS'
         shell: bash -l {0}
         run: |
           set -xe
@@ -233,7 +242,7 @@ jobs:
           rm -rf contrib/gtest
           mkdir -p build
           cd build
-          # Find yaml-cpp config directory
+          # Find yaml-cpp config directory (optional, for local builds)
           YAML_CPP_DIR=""
           if [ -d "$INSTALL_DIR/lib/cmake/yaml-cpp" ]; then
             YAML_CPP_DIR="$INSTALL_DIR/lib/cmake/yaml-cpp"
@@ -245,12 +254,20 @@ jobs:
             YAML_CPP_DIR="$INSTALL_DIR/CMake"
           fi
 
-          # If still not found, search for it
+          # If still not found, search for it (but don't fail if missing)
           if [ -z "$YAML_CPP_DIR" ]; then
-            YAML_CPP_DIR=$(find $INSTALL_DIR -name "yaml-cpp-config.cmake" -o -name "yaml-cppConfig.cmake" 2>/dev/null | head -1 | xargs dirname)
+            FOUND_CONFIG=$(find $INSTALL_DIR -name "yaml-cpp-config.cmake" -o -name "yaml-cppConfig.cmake" 2>/dev/null | head -1 || true)
+            if [ -n "$FOUND_CONFIG" ]; then
+              YAML_CPP_DIR=$(dirname "$FOUND_CONFIG")
+            fi
           fi
 
           echo "yaml-cpp config directory: $YAML_CPP_DIR"
+
+          YAML_OPT=""
+          if [ -n "$YAML_CPP_DIR" ]; then
+             YAML_OPT="-Dyaml-cpp_DIR=$YAML_CPP_DIR"
+          fi
 
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
@@ -258,7 +275,7 @@ jobs:
             -DCMAKE_CXX_STANDARD=17 \
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake \
-            -Dyaml-cpp_DIR="$YAML_CPP_DIR" \
+            $YAML_OPT \
             -DBoost_USE_STATIC_LIBS=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_TESTING=OFF \
