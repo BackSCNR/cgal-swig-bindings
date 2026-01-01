@@ -79,7 +79,8 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash -l {0}
         run: |
-          brew install yaml-cpp || true
+          # Don't install yaml-cpp via Homebrew - requires macOS 14+
+          echo "yaml-cpp will be built from source"
 
       - name: Install Python build dependencies
         shell: bash -l {0}
@@ -116,9 +117,29 @@ jobs:
             -DEIGEN_BUILD_PKGCONFIG=OFF \
             -DEIGEN_BUILD_BLAS=OFF \
             -DEIGEN_BUILD_LAPACK=OFF \
-            -DEIGEN_TEST_NOQT=ON
+            -DEIGEN_TEST_NOQT=ON \
+            -DEIGEN_LEAVE_TEST_IN_ALL_TARGET=OFF
           cmake --install . --config Release
           cd ../../..
+
+      - name: Build yaml-cpp from source
+        shell: bash -l {0}
+        run: |
+          set -xe
+          cd $HOME
+          git clone --depth 1 --branch 0.8.0 https://github.com/jbeder/yaml-cpp.git
+          cd yaml-cpp
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+            -DYAML_CPP_BUILD_TESTS=OFF \
+            -DYAML_CPP_BUILD_TOOLS=OFF \
+            -DYAML_BUILD_SHARED_LIBS=ON
+          cmake --build . --config Release -j$PAR_JOBS
+          cmake --install . --config Release
+          cd ../..
+          rm -rf yaml-cpp
 
       - name: Build libnabo
         shell: bash -l {0}
