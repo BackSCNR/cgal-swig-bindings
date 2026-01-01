@@ -1,0 +1,15 @@
+[submodule "external/OpenGR"]
+	path = external/OpenGR
+	url = https://github.com/BackSCNR/OpenGR.git
+[submodule "external/libpointmatcher"]
+	path = external/libpointmatcher
+	url = https://github.com/BackSCNR/libpointmatcher.git
+[submodule "external/libnabo"]
+	path = external/libnabo
+	url = https://github.com/BackSCNR/libnabo.git
+# IMPORTANT: Eigen must be pinned to tag 3.4.0
+# Eigen 5.x has C++17 compatibility issues with libnabo and libpointmatcher
+[submodule "external/eigen"]
+	path = external/eigen
+	url = https://github.com/BackSCNR/eigen.git
+	branch = 3.4.0

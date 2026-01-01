@@ -55,16 +55,16 @@ CGAL_modules = [
     'Box_intersection_d',
     'Convex_hull_2',
     'Convex_hull_3',
-    'Classification',
+    'Classification',  # Requires Eigen 3.1+ (available via submodule)
     'HalfedgeDS',
     'Interpolation',
     'Mesh_2',
     'Point_set_3',
     'Point_set_processing_3',
-    'Polygon_mesh_processing',
+    'Polygon_mesh_processing',  # Requires Eigen 3.2+ (available via submodule)
     'Polyhedron_3',
     'Polyline_simplification_2',
-    'Shape_detection',
+    'Shape_detection',  # Requires Eigen 3.1+ (available via submodule)
     'Spatial_searching',
     'Voronoi_diagram_2',
     'AABB_tree',

@@ -40,11 +40,23 @@ import java.util.Collection;
 %types(Point_3*,Point_3);//needed so that the identifier SWIGTYPE_p_Point_3 is generated
 %types(Vector_3*,Vector_3);//needed so that the identifier SWIGTYPE_p_Vector_3 is generated
 
+// SWIG typemaps for std::map and std::vector (needed for registration)
+%include "std_string.i"
+%include "std_map.i"
+%include "std_vector.i"
+
+namespace std {
+  %template(StringMap) map<string, string>;
+}
+
 %include "SWIG_CGAL/Point_set_processing_3/functions.h"
 
 %{
   #include <SWIG_CGAL/Point_set_processing_3/functions.h>
 %}
+
+// Expose ICP_config_wrapper class for PointMatcher
+%template(ICP_config_vector) std::vector<CGAL_SWIG::ICP_config_wrapper>;
 
 #ifdef SWIG_CGAL_HAS_Point_set_processing_3_USER_PACKAGE
 %include "SWIG_CGAL/User_packages/Point_set_processing_3/extensions.i"

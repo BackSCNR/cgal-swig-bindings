@@ -25,6 +25,12 @@
 #include <CGAL/vcm_estimate_normals.h>
 #include <CGAL/wlop_simplify_and_regularize_point_set.h>
 
+#include <CGAL/OpenGR/register_point_sets.h>
+#include <CGAL/pointmatcher/register_point_sets.h>
+#include <vector>
+#include <map>
+#include <string>
+
 #ifdef CGAL_LINKED_WITH_TBB
 typedef CGAL::Parallel_tag Concurrency_tag;
 #else
@@ -189,6 +195,134 @@ void wlop_simplify_and_regularize_point_set (Point_set_3_wrapper<CGAL_PS3> input
      neighbor_radius(neighbor_radius).
      number_of_iterations(number_of_iterations).
      require_uniform_sampling(require_uniform_sampling));
+}
+
+// ==============================================================================
+// Point Cloud Registration
+// ==============================================================================
+
+// OpenGR registration using Super4PCS algorithm
+double register_point_sets_opengr(
+    Point_set_3_wrapper<CGAL_PS3> point_set_1,
+    Point_set_3_wrapper<CGAL_PS3> point_set_2,
+    int number_of_samples = 200,
+    double maximum_normal_deviation = 90.0,
+    double accuracy = 5.0,
+    double overlap = 0.2,
+    int maximum_running_time = 1000)
+{
+  // Ensure both point sets have normals
+  if (!point_set_1.get_data().has_normal_map())
+    point_set_1.get_data().add_normal_map();
+  if (!point_set_2.get_data().has_normal_map())
+    point_set_2.get_data().add_normal_map();
+
+  return CGAL::OpenGR::register_point_sets(
+    point_set_1.get_data(),
+    point_set_2.get_data(),
+    point_set_1.get_data().parameters()
+      .point_map(point_set_1.get_data().point_map())
+      .normal_map(point_set_1.get_data().normal_map())
+      .number_of_samples(number_of_samples)
+      .maximum_normal_deviation(maximum_normal_deviation)
+      .accuracy(accuracy)
+      .overlap(overlap)
+      .maximum_running_time(maximum_running_time),
+    point_set_2.get_data().parameters()
+      .point_map(point_set_2.get_data().point_map())
+      .normal_map(point_set_2.get_data().normal_map())
+  );
+}
+
+// ICP_config wrapper class for PointMatcher configuration
+class ICP_config_wrapper
+{
+public:
+  ICP_config_wrapper() {}
+  ICP_config_wrapper(const std::string& config_name)
+    : m_name(config_name) {}
+  ICP_config_wrapper(const std::string& config_name,
+                     const std::map<std::string, std::string>& params)
+    : m_name(config_name), m_params(params) {}
+  void set_name(const std::string& name) { m_name = name; }
+  std::string get_name() const { return m_name; }
+  void add_parameter(const std::string& key, const std::string& value) {
+    m_params[key] = value;
+  }
+  void set_parameters(const std::map<std::string, std::string>& params) {
+    m_params = params;
+  }
+  std::map<std::string, std::string> get_parameters() const { return m_params; }
+  // Convert to CGAL ICP_config
+  CGAL::pointmatcher::ICP_config to_cgal_config() const {
+    return CGAL::pointmatcher::ICP_config{m_name, m_params};
+  }
+
+private:
+  std::string m_name;
+  std::map<std::string, std::string> m_params;
+};
+
+// Helper to convert vector of wrappers to vector of CGAL configs
+std::vector<CGAL::pointmatcher::ICP_config> convert_icp_configs(const std::vector<ICP_config_wrapper>& wrappers)
+{
+  std::vector<CGAL::pointmatcher::ICP_config> configs;
+  configs.reserve(wrappers.size());
+  for (const auto& wrapper : wrappers)
+    configs.push_back(wrapper.to_cgal_config());
+  return configs;
+}
+
+// PointMatcher ICP registration with full parameter exposure
+bool register_point_sets_pointmatcher(
+    Point_set_3_wrapper<CGAL_PS3> point_set_1,
+    Point_set_3_wrapper<CGAL_PS3> point_set_2,
+    const std::vector<ICP_config_wrapper>& point_set_filters = {},
+    const ICP_config_wrapper& matcher = CGAL_SWIG::ICP_config_wrapper("KDTreeMatcher", {{"knn", "1"}}),
+    const std::vector<ICP_config_wrapper>& outlier_filters = {},
+    const ICP_config_wrapper& error_minimizer =
+        CGAL_SWIG::ICP_config_wrapper("PointToPlaneErrorMinimizer", {}),
+    const std::vector<ICP_config_wrapper>& transformation_checkers =
+        {CGAL_SWIG::ICP_config_wrapper("CounterTransformationChecker", {{"maxIterationCount", "150"}})})
+{
+  // Ensure both point sets have normals for ICP
+  if (!point_set_1.get_data().has_normal_map())
+    point_set_1.get_data().add_normal_map();
+  if (!point_set_2.get_data().has_normal_map())
+    point_set_2.get_data().add_normal_map();
+
+  // Convert wrapper configs to CGAL configs
+  auto filters = convert_icp_configs(point_set_filters);
+  auto outliers = convert_icp_configs(outlier_filters);
+  auto checkers = convert_icp_configs(transformation_checkers);
+  auto match_config = matcher.to_cgal_config();
+  auto minimizer_config = error_minimizer.to_cgal_config();
+
+  // Build named parameters
+  auto np1 = point_set_1.get_data().parameters()
+    .point_map(point_set_1.get_data().point_map())
+    .normal_map(point_set_1.get_data().normal_map());
+
+  auto np2 = point_set_2.get_data().parameters()
+    .point_map(point_set_2.get_data().point_map())
+    .normal_map(point_set_2.get_data().normal_map())
+    .matcher(match_config)
+    .error_minimizer(minimizer_config);
+
+  // Add optional filters and checkers if provided
+  if (!filters.empty())
+    np2 = np2.point_set_filters(filters);
+  if (!outliers.empty())
+    np2 = np2.outlier_filters(outliers);
+  if (!checkers.empty())
+    np2 = np2.transformation_checkers(checkers);
+
+  return CGAL::pointmatcher::register_point_sets(
+    point_set_1.get_data(),
+    point_set_2.get_data(),
+    np1,
+    np2
+  );
 }
 
 } // end namespace CGAL_SWIG

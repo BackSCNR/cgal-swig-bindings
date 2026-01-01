@@ -1,0 +1,317 @@
+name: Build Wheels
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  LATEST_CGAL_VERSION: "6.1"
+
+jobs:
+  build-wheels:
+    name: Build Wheel
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        python-version: ["3.12"]
+        cgal_branch: ["v6.1"]
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          submodules: "recursive"
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
+          channels: conda-forge
+
+      - name: Display Python version
+        shell: bash -l {0}
+        run: |
+          echo "Python version: ${{ matrix.python-version }}"
+          python --version
+
+      - name: Install conda dependencies
+        shell: bash -l {0}
+        run: |
+          conda install -y -c conda-forge boost-cpp zlib eigen mpfr numpy \
+            twine delocate pycodestyle swig tbb tbb-devel wheel bzip2 \
+            yaml-cpp gmp cmake
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        shell: bash -l {0}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        shell: bash -l {0}
+        run: |
+          brew install yaml-cpp || true
+
+      - name: Install Python build dependencies
+        shell: bash -l {0}
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools wheel twine numpy delocate
+
+      - name: Install CGAL
+        shell: bash -l {0}
+        run: |
+          set -xe
+          pushd $HOME
+          git clone --depth 1 -b ${{ matrix.cgal_branch }} https://github.com/CGAL/cgal.git
+          cd cgal
+          mkdir build
+          cmake -B build -S . -DCMAKE_INSTALL_PREFIX=$HOME/.local -DCMAKE_BUILD_TYPE=Release
+          cmake --install build
+          cd ..
+          rm -rf cgal
+          popd
+
+      - name: Build Eigen
+        shell: bash -l {0}
+        run: |
+          set -xe
+          cd external/eigen
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$HOME/.local
+          cmake --install . --config Release
+          cd ../../..
+
+      - name: Build libnabo
+        shell: bash -l {0}
+        run: |
+          set -xe
+          cd external/libnabo
+          mkdir -p build
+          cd build
+          CONDA_PREFIX_PATH=$(conda info --base)/envs/build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$HOME/.local \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DEIGEN_INCLUDE_DIR=${{ github.workspace }}/external/eigen
+          cmake --build . --config Release -j2
+          cmake --install . --config Release
+          cd ../../..
+
+      - name: Build libpointmatcher (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -l {0}
+        run: |
+          set -xe
+          cd external/libpointmatcher
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$HOME/.local \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DEIGEN_INCLUDE_DIR=${{ github.workspace }}/external/eigen \
+            -Dlibnabo_DIR=$HOME/.local/share/libnabo/cmake
+          cmake --build . --config Release -j2
+          cmake --install . --config Release
+          cd ../../..
+
+      - name: Build libpointmatcher (Windows)
+        if: runner.os == 'Windows'
+        shell: bash -l {0}
+        run: |
+          set -xe
+          cd external/libpointmatcher
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$HOME/.local \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DEIGEN_INCLUDE_DIR=${{ github.workspace }}/external/eigen \
+            -Dlibnabo_DIR=$HOME/.local/share/libnabo/cmake \
+            -DBoost_USE_STATIC_LIBS=OFF
+          cmake --build . --config Release -j2
+          cmake --install . --config Release
+          cd ../../..
+
+      - name: Build OpenGR
+        shell: bash -l {0}
+        run: |
+          set -xe
+          cd external/OpenGR
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$HOME/.local \
+            -DIO_USE_OPENCV=OFF
+          cmake --build . --config Release -j2
+          cmake --install . --config Release
+          cd ../../..
+
+      - name: Build wheel (Linux)
+        if: runner.os == 'Linux'
+        shell: bash -l {0}
+        run: |
+          set -ex
+          CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $HOME/.local/include/CGAL/version.h)
+          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d%H%M')
+          CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
+          echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
+          export CGAL_PYTHON_MODULE_VERSION
+          mkdir -p build/build-python/CGAL
+          python setup.py bdist_wheel \
+            --cmake-prefix-path="$HOME/.local" \
+            --python-executable=$(which python)
+          # Note: OpenGR_DIR, libpointmatcher_DIR, libnabo_DIR are auto-discovered via CMAKE_PREFIX_PATH
+
+      - name: Build wheel (macOS)
+        if: runner.os == 'macOS'
+        shell: bash -l {0}
+        run: |
+          set -ex
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          export CMAKE_PREFIX_PATH=$HOME/.local
+          CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $HOME/.local/include/CGAL/version.h)
+          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d%H%M')
+          CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
+          echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
+          export CGAL_PYTHON_MODULE_VERSION
+          mkdir -p build/build-python/CGAL
+          python setup.py bdist_wheel \
+            --cmake-prefix-path=$HOME/.local \
+            --python-executable=$(which python)
+          delocate-wheel -v -w fixed_wheel dist/*.whl
+          rm dist/*.whl
+          cp fixed_wheel/*.whl dist/
+
+      - name: Build wheel (Windows)
+        if: runner.os == 'Windows'
+        shell: bash -l {0}
+        run: |
+          set -ex
+          CONDA_ENV_DIR=$(conda env list --json | jq -r '.envs | .[] | select(test("build"))')
+          CONDA_ENV_DIR="$CONDA_ENV_DIR\\Library"
+          export CMAKE_PREFIX_PATH="${CONDA_ENV_DIR};$(cygpath -w $HOME/.local)"
+          export LIB=${CONDA_ENV_DIR}\\lib
+          CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $HOME/.local/include/CGAL/version.h)
+          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d%H%M')
+          CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
+          echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
+          export CGAL_PYTHON_MODULE_VERSION
+          mkdir -p build/build-python/CGAL
+          python setup.py bdist_wheel \
+            --cmake-prefix-path="${CMAKE_PREFIX_PATH}" \
+            --python-executable=$(which python)
+          pip install delvewheel
+          delvewheel repair --ignore-in-wheel dist/*.whl -w fixed_wheels
+          rm dist/*.whl
+          mv fixed_wheels/*.whl dist/
+
+      - name: Check wheel
+        shell: bash -l {0}
+        run: |
+          python -m twine check dist/*.whl
+
+      - name: Test wheel installation
+        shell: bash -l {0}
+        run: |
+          set -ex
+          pip install dist/*.whl
+          python -c "
+          from CGAL import CGAL_Point_set_processing_3 as psp
+          print('Testing registration functions...')
+          assert hasattr(psp, 'register_point_sets_opengr'), 'OpenGR missing'
+          assert hasattr(psp, 'register_point_sets_pointmatcher'), 'PointMatcher missing'
+          assert hasattr(psp, 'ICP_config_wrapper'), 'ICP_config_wrapper missing'
+          assert hasattr(psp, 'ICP_config_vector'), 'ICP_config_vector missing'
+          print('✓ All registration functions available!')
+          "
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: cgal-wheel-${{ github.run_id }}-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist/*.whl
+
+  test-wheels:
+    name: Test Wheel
+    needs: build-wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download wheel
+        uses: actions/download-artifact@v6
+        with:
+          name: cgal-wheel-${{ github.run_id }}-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist
+
+      - name: Install and test wheel
+        shell: bash
+        run: |
+          set -ex
+          pip install dist/*.whl
+          cd examples/python
+          python test_registration_install.py
+
+      - name: Run registration example
+        shell: bash
+        run: |
+          set -ex
+          cd examples/python
+          python Point_set_registration_example.py
+
+  release:
+    name: Upload Release Wheels
+    needs: [build-wheels, test-wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v6
+        with:
+          path: wheels
+          pattern: cgal-wheel-${{ github.run_id }}-*
+          merge-multiple: true
+
+      - name: Display wheels
+        run: |
+          ls -lah wheels/
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: wheels/*.whl
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
