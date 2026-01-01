@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        os: [ubuntu-latest, macos-latest, macos-13-large, windows-latest]
         python-version: ["3.12"]
         cgal_branch: ["v6.1"]
 
@@ -47,7 +47,7 @@ jobs:
         run: |
           conda install -y -c conda-forge boost-cpp zlib eigen mpfr numpy \
             twine delocate pycodestyle swig tbb tbb-devel wheel bzip2 \
-            yaml-cpp gmp gmpxx cmake
+            yaml-cpp gmp cmake
 
       - name: Install system dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -55,6 +55,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential
+          # Install gmpxx from conda on Linux to avoid library path conflicts
+          conda install -y -c conda-forge gmpxx
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
