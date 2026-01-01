@@ -20,7 +20,18 @@ echo "Parallel jobs: $PAR_JOBS"
 cd /cgal-bindings
 
 # Install build dependencies
-yum install -y wget tar bzip2 boost-devel
+yum install -y wget tar bzip2
+
+# Install Boost 1.82.0 from source (yum version 1.53 is too old)
+echo "=== Building Boost 1.82.0 ==="
+cd /tmp
+wget -q https://archives.boost.io/release/1.82.0/source/boost_1_82_0.tar.bz2
+tar --bzip2 -xf boost_1_82_0.tar.bz2
+cd boost_1_82_0
+./bootstrap.sh --with-libraries=thread,system,program_options,date_time,chrono --prefix=$INSTALL_PREFIX
+./b2 cxxflags=-fPIC cflags=-fPIC link=static install -j$PAR_JOBS
+export BOOST_ROOT=$INSTALL_PREFIX
+cd /cgal-bindings
 
 # Build Eigen
 echo "=== Building Eigen ==="
