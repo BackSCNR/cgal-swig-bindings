@@ -97,6 +97,7 @@ cmake .. \
   -DBUILD_TESTING=OFF \
   -DENABLE_TESTING=OFF \
   -DBUILD_EXAMPLES=OFF \
+  -DBoost_USE_STATIC_LIBS=ON \
   -DBUILD_SHARED_LIBS=ON
 cmake --build . --config Release -j$PAR_JOBS
 cmake --install . --config Release

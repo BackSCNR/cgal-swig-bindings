@@ -282,7 +282,7 @@ jobs:
             -DBUILD_TESTING=OFF \
             -DENABLE_TESTING=OFF \
             -DBUILD_EXAMPLES=OFF \
-            -DCMAKE_CXX_FLAGS="-DBOOST_TIMER_ENABLE_DEPRECATED"
+            -DCMAKE_CXX_FLAGS="/EHsc /DWIN32 /D_WINDOWS /W3 /GR /D_CRT_SECURE_NO_WARNINGS -DBOOST_TIMER_ENABLE_DEPRECATED"
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           cd ../../..

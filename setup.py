@@ -312,6 +312,8 @@ class my_build_ext(build_ext_orig):
         ]
         if sys.platform == 'win32' or sys.platform == 'cygwin':
             cmake_args.append('-DBoost_LIB_DIAGNOSTIC_DEFINITIONS=TRUE')
+        else:
+             cmake_args.append('-DBoost_USE_STATIC_LIBS=ON')
 
         if self.install_dir is not None:
             cmake_args.append('-DCMAKE_INSTALL_PREFIX='+self.install_dir)
