@@ -281,7 +281,8 @@ jobs:
             -DBUILD_TESTS=OFF \
             -DBUILD_TESTING=OFF \
             -DENABLE_TESTING=OFF \
-            -DBUILD_EXAMPLES=OFF
+            -DBUILD_EXAMPLES=OFF \
+            -DCMAKE_CXX_FLAGS="/DBOOST_TIMER_ENABLE_DEPRECATED"
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           cd ../../..

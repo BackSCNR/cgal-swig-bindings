@@ -37,7 +37,7 @@ cmake .. \
   -DEIGEN_TEST_NOQT=ON \
   -DEIGEN_LEAVE_TEST_IN_ALL_TARGET=OFF
 cmake --install . --config Release
-cd ../../..
+cd /cgal-bindings
 
 # Build yaml-cpp
 echo "=== Building yaml-cpp ==="
@@ -70,7 +70,7 @@ cmake .. \
   -DBUILD_SHARED_LIBS=ON
 cmake --build . --config Release -j$PAR_JOBS
 cmake --install . --config Release
-cd ../../..
+cd /cgal-bindings
 
 # Build libpointmatcher
 echo "=== Building libpointmatcher ==="
@@ -93,7 +93,7 @@ cmake --install . --config Release
 cd $INSTALL_PREFIX && ln -sf include/pointmatcher pointmatcher
 cd /cgal-bindings/external/libpointmatcher
 
-cd ../../..
+cd /cgal-bindings
 
 # Build OpenGR
 echo "=== Building OpenGR ==="
@@ -105,7 +105,7 @@ cmake .. \
   -DIO_USE_OPENCV=OFF
 cmake --build . --config Release -j$PAR_JOBS
 cmake --install . --config Release
-cd ../../..
+cd /cgal-bindings
 
 # Build CGAL wheel
 echo "=== Building CGAL wheel ==="
