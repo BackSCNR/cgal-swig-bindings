@@ -151,8 +151,10 @@ jobs:
             -DCMAKE_CXX_STANDARD=17 \
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake \
-            -DBUILD_TESTS=OFF
-          cmake --build . --config Release -j$PAR_JOBS
+            -DBUILD_TESTS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DENABLE_TESTING=OFF
+          cmake --build . --config Release -j$PAR_JOBS --target pointmatcher
           cmake --install . --config Release
           # Workaround: libpointmatcher CMake config points to wrong include dir
           # Create symlink so $INSTALL_DIR/pointmatcher -> $INSTALL_DIR/include/pointmatcher
@@ -176,8 +178,10 @@ jobs:
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake \
             -DBoost_USE_STATIC_LIBS=OFF \
-            -DBUILD_TESTS=OFF
-          cmake --build . --config Release -j$PAR_JOBS
+            -DBUILD_TESTS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DENABLE_TESTING=OFF
+          cmake --build . --config Release -j$PAR_JOBS --target pointmatcher
           cmake --install . --config Release
           cd ../../..
 
@@ -202,7 +206,7 @@ jobs:
         run: |
           set -ex
           CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $INSTALL_DIR/include/CGAL/version.h)
-          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d%H%M')
+          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
           CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
           echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
           export CGAL_PYTHON_MODULE_VERSION
@@ -217,8 +221,8 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install auditwheel patchelf
-          # Use manylinux_2_35 for Ubuntu 22.04+ (auto-detect platform)
-          auditwheel repair --plat manylinux_2_35_x86_64 dist/*.whl -w fixed_wheels
+          # Let auditwheel auto-detect the appropriate manylinux platform
+          auditwheel repair dist/*.whl -w fixed_wheels
           rm dist/*.whl
           mv fixed_wheels/*.whl dist/
 
@@ -230,7 +234,7 @@ jobs:
           export MACOSX_DEPLOYMENT_TARGET=11.0
           export CMAKE_PREFIX_PATH=$INSTALL_DIR
           CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $INSTALL_DIR/include/CGAL/version.h)
-          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d%H%M')
+          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
           CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
           echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
           export CGAL_PYTHON_MODULE_VERSION
@@ -255,7 +259,7 @@ jobs:
           export CMAKE_PREFIX_PATH="${CONDA_ENV_DIR};$(cygpath -w $INSTALL_DIR)"
           export LIB=${CONDA_ENV_DIR}\\lib
           CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $INSTALL_DIR/include/CGAL/version.h)
-          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d%H%M')
+          CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
           CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
           echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
           export CGAL_PYTHON_MODULE_VERSION
