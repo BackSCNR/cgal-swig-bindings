@@ -34,12 +34,14 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            echo "PAR_JOBS=$NUMBER_OF_PROCESSORS" >> $GITHUB_ENV
+            PAR_JOBS=$NUMBER_OF_PROCESSORS
           elif [[ "$OSTYPE" == "darwin"* ]]; then
-            echo "PAR_JOBS=$(sysctl -n hw.logicalcpu)" >> $GITHUB_ENV
+            PAR_JOBS=$(sysctl -n hw.logicalcpu)
           else
-            echo "PAR_JOBS=$(nproc)" >> $GITHUB_ENV
+            PAR_JOBS=$(nproc)
           fi
+          echo "Detected parallel jobs: $PAR_JOBS"
+          echo "PAR_JOBS=$PAR_JOBS" >> $GITHUB_ENV
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
@@ -144,6 +146,12 @@ jobs:
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
+          # Fix libpointmatcher include path in CMake config
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            find $INSTALL_DIR/share/libpointmatcher/cmake -name "*.cmake" -print0 | xargs -0 sed -i '' "s|$INSTALL_DIR/pointmatcher|$INSTALL_DIR/include/pointmatcher|g"
+          else
+            find $INSTALL_DIR/share/libpointmatcher/cmake -name "*.cmake" -print0 | xargs -0 sed -i "s|$INSTALL_DIR/pointmatcher|$INSTALL_DIR/include/pointmatcher|g"
+          fi
           cd ../../..
 
       - name: Build libpointmatcher (Windows)
