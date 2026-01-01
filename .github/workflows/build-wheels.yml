@@ -259,7 +259,7 @@ jobs:
           cmake --install . --config Release
           cd ../../..
 
-      - name: Build wheel (Linux)
+      - name: Build and repair wheel (Linux)
         if: runner.os == 'Linux'
         shell: bash -l {0}
         run: |
@@ -269,40 +269,20 @@ jobs:
           CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
           echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
           export CGAL_PYTHON_MODULE_VERSION
-          mkdir -p build/build-python/CGAL
-          python setup.py bdist_wheel \
-            --cmake-prefix-path="$INSTALL_DIR" \
-            --python-executable=$(which python)
-          # Note: OpenGR_DIR, libpointmatcher_DIR, libnabo_DIR are auto-discovered via CMAKE_PREFIX_PATH
 
-      - name: Repair Linux wheel
-        if: runner.os == 'Linux'
-        shell: bash -l {0}
-        run: |
-          pip install auditwheel patchelf
-          # Set LD_LIBRARY_PATH so auditwheel can find all libraries
-          CONDA_LIB=$(conda info --base)/envs/build/lib
-          export LD_LIBRARY_PATH=$CONDA_LIB:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
-          # Debug: show where libraries are
-          echo "=== Debugging library locations ==="
-          echo "INSTALL_DIR: $INSTALL_DIR"
-          echo "CONDA_LIB: $CONDA_LIB"
-          echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-          echo ""
-          echo "All libraries in INSTALL_DIR:"
-          find $INSTALL_DIR -type f \( -name "*.so*" -o -name "*.a" \) 2>/dev/null || echo "No libraries found!"
-          echo ""
-          echo "CGAL libraries specifically:"
-          find $INSTALL_DIR -name "libCGAL*.so*" 2>/dev/null || echo "No CGAL .so files found!"
-          echo ""
-          echo "Contents of wheel before repair:"
-          unzip -l dist/*.whl | grep -E '\.(so|dylib|dll)' || true
-          echo ""
-          echo "=== Running auditwheel ==="
-          # Let auditwheel auto-detect the appropriate manylinux platform
-          auditwheel repair dist/*.whl -w fixed_wheels
-          rm dist/*.whl
-          mv fixed_wheels/*.whl dist/
+          # Use Docker manylinux container for building portable Linux wheels
+          docker pull cgal/python-wheel:manylinux2014
+          docker run --rm \
+            -v$INSTALL_DIR:/cgal \
+            -v${PWD}:/cgal-bindings \
+            -eCGAL_PYTHON_MODULE_VERSION=$CGAL_PYTHON_MODULE_VERSION \
+            -ePYTHON_VERSION_MINOR=$(python -c "import sys; print(sys.version_info.minor)") \
+            cgal/python-wheel:manylinux2014
+
+          # Move wheel from wheelhouse to dist
+          mkdir -p dist
+          rm -f cgal-*.whl dist/*.whl 2>/dev/null || true
+          cp wheelhouse/*.whl dist/
 
       - name: Build wheel (macOS)
         if: runner.os == 'macOS'
