@@ -47,7 +47,7 @@ jobs:
         run: |
           conda install -y -c conda-forge boost-cpp zlib eigen mpfr numpy \
             twine delocate pycodestyle swig tbb tbb-devel wheel bzip2 \
-            yaml-cpp gmp cmake
+            yaml-cpp gmp gmpxx cmake
 
       - name: Install system dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -107,7 +107,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=$HOME/.local \
             -DCMAKE_CXX_STANDARD=17 \
-            -DEIGEN_INCLUDE_DIR=${{ github.workspace }}/external/eigen
+            -DEIGEN_INCLUDE_DIR=${{ github.workspace }}/external/eigen \
+            -DUSE_OPEN_MP=OFF
           cmake --build . --config Release -j2
           cmake --install . --config Release
           cd ../../..
