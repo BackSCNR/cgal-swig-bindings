@@ -98,6 +98,11 @@ jobs:
           mkdir build
           cmake -B build -S . -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Release
           cmake --install build
+          echo "CGAL installation completed"
+          echo "Contents of $INSTALL_DIR/lib:"
+          ls -la $INSTALL_DIR/lib/ || echo "lib directory doesn't exist!"
+          echo "All .so files in $INSTALL_DIR:"
+          find $INSTALL_DIR -type f -name "*.so*" || true
           cd ..
           rm -rf cgal
           popd
@@ -106,9 +111,18 @@ jobs:
         shell: bash -l {0}
         run: |
           set -xe
+          # Set deployment target for macOS
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            export MACOSX_DEPLOYMENT_TARGET=11.0
+          fi
           cd external/eigen
           mkdir -p build
           cd build
+          # Extra flags for Windows to prevent Fortran compiler search
+          EXTRA_FLAGS=""
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            EXTRA_FLAGS="-DCMAKE_DISABLE_FIND_PACKAGE_BLAS=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_LAPACK=TRUE"
+          fi
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
@@ -118,7 +132,8 @@ jobs:
             -DEIGEN_BUILD_BLAS=OFF \
             -DEIGEN_BUILD_LAPACK=OFF \
             -DEIGEN_TEST_NOQT=ON \
-            -DEIGEN_LEAVE_TEST_IN_ALL_TARGET=OFF
+            -DEIGEN_LEAVE_TEST_IN_ALL_TARGET=OFF \
+            $EXTRA_FLAGS
           cmake --install . --config Release
           cd ../../..
 
@@ -126,6 +141,11 @@ jobs:
         shell: bash -l {0}
         run: |
           set -xe
+          # Set deployment target for macOS to ensure compatibility
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            export MACOSX_DEPLOYMENT_TARGET=11.0
+            echo "Set MACOSX_DEPLOYMENT_TARGET=11.0 for macOS"
+          fi
           cd $HOME
           git clone --depth 1 --branch 0.8.0 https://github.com/jbeder/yaml-cpp.git
           cd yaml-cpp
@@ -146,6 +166,10 @@ jobs:
         shell: bash -l {0}
         run: |
           set -xe
+          # Set deployment target for macOS
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            export MACOSX_DEPLOYMENT_TARGET=11.0
+          fi
           cd external/libnabo
           mkdir -p build
           cd build
@@ -165,6 +189,10 @@ jobs:
         shell: bash -l {0}
         run: |
           set -xe
+          # Set deployment target for macOS
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            export MACOSX_DEPLOYMENT_TARGET=11.0
+          fi
           cd external/libpointmatcher
           mkdir -p build
           cd build
@@ -216,6 +244,10 @@ jobs:
         shell: bash -l {0}
         run: |
           set -xe
+          # Set deployment target for macOS
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            export MACOSX_DEPLOYMENT_TARGET=11.0
+          fi
           cd external/OpenGR
           mkdir -p build
           cd build
@@ -252,10 +284,21 @@ jobs:
           CONDA_LIB=$(conda info --base)/envs/build/lib
           export LD_LIBRARY_PATH=$CONDA_LIB:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
           # Debug: show where libraries are
+          echo "=== Debugging library locations ==="
           echo "INSTALL_DIR: $INSTALL_DIR"
-          echo "Looking for CGAL libraries:"
-          find $INSTALL_DIR -name "libCGAL*.so*" || true
+          echo "CONDA_LIB: $CONDA_LIB"
           echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+          echo ""
+          echo "All libraries in INSTALL_DIR:"
+          find $INSTALL_DIR -type f \( -name "*.so*" -o -name "*.a" \) 2>/dev/null || echo "No libraries found!"
+          echo ""
+          echo "CGAL libraries specifically:"
+          find $INSTALL_DIR -name "libCGAL*.so*" 2>/dev/null || echo "No CGAL .so files found!"
+          echo ""
+          echo "Contents of wheel before repair:"
+          unzip -l dist/*.whl | grep -E '\.(so|dylib|dll)' || true
+          echo ""
+          echo "=== Running auditwheel ==="
           # Let auditwheel auto-detect the appropriate manylinux platform
           auditwheel repair dist/*.whl -w fixed_wheels
           rm dist/*.whl
@@ -280,6 +323,18 @@ jobs:
           # Set DYLD_LIBRARY_PATH so delocate-wheel can find TBB and other libraries
           CONDA_LIB=$(conda info --base)/envs/build/lib
           export DYLD_LIBRARY_PATH=$CONDA_LIB:$INSTALL_DIR/lib:$DYLD_LIBRARY_PATH
+          echo "=== Debugging macOS library deployment targets ==="
+          echo "Checking deployment targets of libraries in $INSTALL_DIR/lib:"
+          for lib in $INSTALL_DIR/lib/*.dylib; do
+            if [ -f "$lib" ]; then
+              echo "$(basename $lib): $(otool -l "$lib" | grep -A 3 LC_VERSION_MIN_MACOSX | grep version || echo 'no version info')"
+            fi
+          done
+          echo ""
+          echo "yaml-cpp deployment target:"
+          find $INSTALL_DIR -name "*yaml-cpp*.dylib" -exec otool -l {} \; | grep -A 3 LC_VERSION_MIN_MACOSX || echo "Not found or no version info"
+          echo ""
+          echo "=== Running delocate-wheel ==="
           delocate-wheel -v -w fixed_wheel dist/*.whl
           rm dist/*.whl
           cp fixed_wheel/*.whl dist/
