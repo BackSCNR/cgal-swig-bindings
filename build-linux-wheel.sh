@@ -29,7 +29,7 @@ wget -q https://archives.boost.io/release/1.82.0/source/boost_1_82_0.tar.bz2
 tar --bzip2 -xf boost_1_82_0.tar.bz2
 cd boost_1_82_0
 ./bootstrap.sh --with-libraries=thread,system,program_options,date_time,chrono --prefix=$INSTALL_PREFIX
-./b2 cxxflags=-fPIC cflags=-fPIC link=static install -j$PAR_JOBS
+./b2 cxxflags=-fPIC cflags=-fPIC link=shared install -j$PAR_JOBS
 export BOOST_ROOT=$INSTALL_PREFIX
 cd /cgal-bindings
 

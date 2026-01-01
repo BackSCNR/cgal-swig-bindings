@@ -230,6 +230,9 @@ jobs:
         shell: bash -l {0}
         run: |
           set -xe
+          # Disable Git Bash path conversion to prevent /EHsc -> C:/Program Files/Git/EHsc
+          export MSYS_NO_PATHCONV=1
+
           # Debug: Check where yaml-cpp was installed
           echo "=== Debugging yaml-cpp installation ==="
           echo "INSTALL_DIR: $INSTALL_DIR"
