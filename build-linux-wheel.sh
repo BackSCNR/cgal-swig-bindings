@@ -20,7 +20,7 @@ echo "Parallel jobs: $PAR_JOBS"
 cd /cgal-bindings
 
 # Install build dependencies
-yum install -y wget tar bzip2
+yum install -y wget tar bzip2 boost-devel
 
 # Build Eigen
 echo "=== Building Eigen ==="

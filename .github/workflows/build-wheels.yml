@@ -238,8 +238,9 @@ jobs:
           echo ""
 
           cd external/libpointmatcher
-          # Remove gtest to prevent compilation errors with old C++ code
-          rm -rf contrib/gtest
+          # Disable gtest by making its CMakeLists.txt empty
+          # This is safer than removing the directory as the parent CMakeLists still adds the subdirectory
+          echo "" > contrib/CMakeLists.txt
           mkdir -p build
           cd build
           # Find yaml-cpp config directory (optional, for local builds)
