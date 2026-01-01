@@ -150,9 +150,8 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
             -DCMAKE_CXX_STANDARD=17 \
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
-            -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake
-          cmake --build . --config Release -j$PAR_JOBS
-          cmake --install . --config Release
+            -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake \
+            -DBUILD_TESTS=OFF
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           # Workaround: libpointmatcher CMake config points to wrong include dir
@@ -176,7 +175,8 @@ jobs:
             -DCMAKE_CXX_STANDARD=17 \
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake \
-            -DBoost_USE_STATIC_LIBS=OFF
+            -DBoost_USE_STATIC_LIBS=OFF \
+            -DBUILD_TESTS=OFF
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           cd ../../..
@@ -217,7 +217,8 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install auditwheel patchelf
-          auditwheel repair --plat manylinux_2_31_x86_64 dist/*.whl -w fixed_wheels
+          # Use manylinux_2_35 for Ubuntu 22.04+ (auto-detect platform)
+          auditwheel repair --plat manylinux_2_35_x86_64 dist/*.whl -w fixed_wheels
           rm dist/*.whl
           mv fixed_wheels/*.whl dist/
 
@@ -237,9 +238,10 @@ jobs:
           python setup.py bdist_wheel \
             --cmake-prefix-path=$INSTALL_DIR \
             --python-executable=$(which python)
-          # Add conda lib path so delocate-wheel can find TBB and other conda libraries
+          # Set DYLD_LIBRARY_PATH so delocate-wheel can find TBB and other libraries
           CONDA_LIB=$(conda info --base)/envs/build/lib
-          delocate-wheel -v -w fixed_wheel --dylib-path $CONDA_LIB --dylib-path $INSTALL_DIR/lib dist/*.whl
+          export DYLD_LIBRARY_PATH=$CONDA_LIB:$INSTALL_DIR/lib:$DYLD_LIBRARY_PATH
+          delocate-wheel -v -w fixed_wheel dist/*.whl
           rm dist/*.whl
           cp fixed_wheel/*.whl dist/
 
