@@ -170,6 +170,8 @@ jobs:
         run: |
           set -xe
           cd external/libpointmatcher
+          # Remove gtest to prevent compilation errors with old C++ code
+          rm -rf contrib/gtest
           mkdir -p build
           cd build
           cmake .. \
@@ -223,6 +225,9 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install auditwheel patchelf
+          # Set LD_LIBRARY_PATH so auditwheel can find TBB and other conda libraries
+          CONDA_LIB=$(conda info --base)/envs/build/lib
+          export LD_LIBRARY_PATH=$CONDA_LIB:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
           # Let auditwheel auto-detect the appropriate manylinux platform
           auditwheel repair dist/*.whl -w fixed_wheels
           rm dist/*.whl
