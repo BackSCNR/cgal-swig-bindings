@@ -226,12 +226,23 @@ jobs:
           rm -rf contrib/gtest
           mkdir -p build
           cd build
+          # Find yaml-cpp config directory
+          YAML_CPP_DIR=""
+          if [ -d "$INSTALL_DIR/lib/cmake/yaml-cpp" ]; then
+            YAML_CPP_DIR="$INSTALL_DIR/lib/cmake/yaml-cpp"
+          elif [ -d "$INSTALL_DIR/share/yaml-cpp/cmake" ]; then
+            YAML_CPP_DIR="$INSTALL_DIR/share/yaml-cpp/cmake"
+          elif [ -d "$INSTALL_DIR/cmake" ]; then
+            YAML_CPP_DIR="$INSTALL_DIR/cmake"
+          fi
+          echo "yaml-cpp config directory: $YAML_CPP_DIR"
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
             -DCMAKE_CXX_STANDARD=17 \
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake \
+            -Dyaml-cpp_DIR="$YAML_CPP_DIR" \
             -DBoost_USE_STATIC_LIBS=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_TESTING=OFF \
@@ -269,16 +280,19 @@ jobs:
           CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
           CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
           echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
-          export CGAL_PYTHON_MODULE_VERSION
 
-          # Use Docker manylinux container for building portable Linux wheels
-          docker pull cgal/python-wheel:manylinux2014
+          # Make build script executable
+          chmod +x build-linux-wheel.sh
+
+          # Use Docker manylinux container with custom build script
+          docker pull quay.io/pypa/manylinux2014_x86_64
           docker run --rm \
             -v$INSTALL_DIR:/cgal \
             -v${PWD}:/cgal-bindings \
             -eCGAL_PYTHON_MODULE_VERSION=$CGAL_PYTHON_MODULE_VERSION \
             -ePYTHON_VERSION_MINOR=$(python -c "import sys; print(sys.version_info.minor)") \
-            cgal/python-wheel:manylinux2014
+            quay.io/pypa/manylinux2014_x86_64 \
+            /cgal-bindings/build-linux-wheel.sh
 
           # Move wheel from wheelhouse to dist
           mkdir -p dist
