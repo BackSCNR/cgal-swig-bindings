@@ -156,9 +156,9 @@ jobs:
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           # Workaround: libpointmatcher CMake config points to wrong include dir
-          # Create symlink so $INSTALL_DIR/pointmatcher -> $INSTALL_DIR/include
-          if [[ "$OSTYPE" == "darwin"* ]] || [[ "$runner.os" == "Linux" ]]; then
-             ln -sf include $INSTALL_DIR/pointmatcher
+          # Create symlink so $INSTALL_DIR/pointmatcher -> $INSTALL_DIR/include/pointmatcher
+          if [[ "$OSTYPE" == "darwin"* ]] || [[ "${{ runner.os }}" == "Linux" ]]; then
+             cd $INSTALL_DIR && ln -sf include/pointmatcher pointmatcher
           fi
           cd ../../..
 
@@ -237,7 +237,9 @@ jobs:
           python setup.py bdist_wheel \
             --cmake-prefix-path=$INSTALL_DIR \
             --python-executable=$(which python)
-          delocate-wheel -v -w fixed_wheel dist/*.whl
+          # Add conda lib path so delocate-wheel can find TBB and other conda libraries
+          CONDA_LIB=$(conda info --base)/envs/build/lib
+          delocate-wheel -v -w fixed_wheel --dylib-path $CONDA_LIB --dylib-path $INSTALL_DIR/lib dist/*.whl
           rm dist/*.whl
           cp fixed_wheel/*.whl dist/
 
