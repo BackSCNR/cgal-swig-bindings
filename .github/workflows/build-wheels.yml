@@ -153,8 +153,9 @@ jobs:
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake \
             -DBUILD_TESTS=OFF \
             -DBUILD_TESTING=OFF \
-            -DENABLE_TESTING=OFF
-          cmake --build . --config Release -j$PAR_JOBS --target pointmatcher
+            -DENABLE_TESTING=OFF \
+            -DBUILD_EXAMPLES=OFF
+          cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           # Workaround: libpointmatcher CMake config points to wrong include dir
           # Create symlink so $INSTALL_DIR/pointmatcher -> $INSTALL_DIR/include/pointmatcher
@@ -180,8 +181,9 @@ jobs:
             -DBoost_USE_STATIC_LIBS=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_TESTING=OFF \
-            -DENABLE_TESTING=OFF
-          cmake --build . --config Release -j$PAR_JOBS --target pointmatcher
+            -DENABLE_TESTING=OFF \
+            -DBUILD_EXAMPLES=OFF
+          cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           cd ../../..
 
