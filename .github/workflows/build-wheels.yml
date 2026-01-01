@@ -221,6 +221,13 @@ jobs:
         shell: bash -l {0}
         run: |
           set -xe
+          # Debug: Check where yaml-cpp was installed
+          echo "=== Debugging yaml-cpp installation ==="
+          echo "INSTALL_DIR: $INSTALL_DIR"
+          echo "Looking for yaml-cpp files:"
+          find $INSTALL_DIR -name "*yaml-cpp*" -o -name "*yaml*" 2>/dev/null || echo "No yaml-cpp files found!"
+          echo ""
+
           cd external/libpointmatcher
           # Remove gtest to prevent compilation errors with old C++ code
           rm -rf contrib/gtest
@@ -234,8 +241,17 @@ jobs:
             YAML_CPP_DIR="$INSTALL_DIR/share/yaml-cpp/cmake"
           elif [ -d "$INSTALL_DIR/cmake" ]; then
             YAML_CPP_DIR="$INSTALL_DIR/cmake"
+          elif [ -d "$INSTALL_DIR/CMake" ]; then
+            YAML_CPP_DIR="$INSTALL_DIR/CMake"
           fi
+
+          # If still not found, search for it
+          if [ -z "$YAML_CPP_DIR" ]; then
+            YAML_CPP_DIR=$(find $INSTALL_DIR -name "yaml-cpp-config.cmake" -o -name "yaml-cppConfig.cmake" 2>/dev/null | head -1 | xargs dirname)
+          fi
+
           echo "yaml-cpp config directory: $YAML_CPP_DIR"
+
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
@@ -280,6 +296,10 @@ jobs:
           CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
           CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION
           echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
+
+          # Clean any existing build directories to avoid CMake cache conflicts
+          find external -type d -name build -exec rm -rf {} + 2>/dev/null || true
+          rm -rf build/build-python 2>/dev/null || true
 
           # Make build script executable
           chmod +x build-linux-wheel.sh
