@@ -288,6 +288,19 @@ jobs:
             -DCMAKE_CXX_FLAGS="/EHsc /DWIN32 /D_WINDOWS /W3 /GR /D_CRT_SECURE_NO_WARNINGS -DBOOST_TIMER_ENABLE_DEPRECATED"
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
+
+          # Debug: Check what CMake files were actually installed
+          echo "=== Debugging libpointmatcher installation ==="
+          echo "All installed files in $INSTALL_DIR/CMake:"
+          ls -la $INSTALL_DIR/CMake/ || echo "CMake directory doesn't exist!"
+          echo ""
+          echo "All installed files in $INSTALL_DIR/share:"
+          ls -la $INSTALL_DIR/share/ || echo "share directory doesn't exist!"
+          echo ""
+          echo "Searching for any pointmatcher config files:"
+          find $INSTALL_DIR -name "*pointmatcher*.cmake" 2>/dev/null || echo "No config files found!"
+          echo ""
+
           cd ../../..
 
       - name: Build OpenGR
