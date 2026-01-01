@@ -10,7 +10,6 @@ on:
 
 env:
   LATEST_CGAL_VERSION: "6.1"
-  INSTALL_DIR: ${{ github.workspace }}/external/install
 
 jobs:
   build-wheels:
@@ -30,15 +29,20 @@ jobs:
           fetch-depth: 1
           submodules: "recursive"
 
-      - name: Determine parallel job count
+      - name: Configure environment (Parallel Jobs & Install Path)
         shell: bash
         run: |
+          # Determine parallel jobs
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             PAR_JOBS=$NUMBER_OF_PROCESSORS
+            # Normalize path to forward slashes for CMake on Windows
+            echo "INSTALL_DIR=$(cygpath -m ${{ github.workspace }}/external/install)" >> $GITHUB_ENV
           elif [[ "$OSTYPE" == "darwin"* ]]; then
             PAR_JOBS=$(sysctl -n hw.logicalcpu)
+            echo "INSTALL_DIR=${{ github.workspace }}/external/install" >> $GITHUB_ENV
           else
             PAR_JOBS=$(nproc)
+            echo "INSTALL_DIR=${{ github.workspace }}/external/install" >> $GITHUB_ENV
           fi
           echo "Detected parallel jobs: $PAR_JOBS"
           echo "PAR_JOBS=$PAR_JOBS" >> $GITHUB_ENV
@@ -204,6 +208,15 @@ jobs:
             --cmake-prefix-path="$INSTALL_DIR" \
             --python-executable=$(which python)
           # Note: OpenGR_DIR, libpointmatcher_DIR, libnabo_DIR are auto-discovered via CMAKE_PREFIX_PATH
+
+      - name: Repair Linux wheel
+        if: runner.os == 'Linux'
+        shell: bash -l {0}
+        run: |
+          pip install auditwheel patchelf
+          auditwheel repair --plat manylinux_2_31_x86_64 dist/*.whl -w fixed_wheels
+          rm dist/*.whl
+          mv fixed_wheels/*.whl dist/
 
       - name: Build wheel (macOS)
         if: runner.os == 'macOS'
