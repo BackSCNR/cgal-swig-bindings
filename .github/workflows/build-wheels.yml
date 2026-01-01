@@ -29,6 +29,17 @@ jobs:
           fetch-depth: 1
           submodules: "recursive"
 
+      - name: Determine parallel job count
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            echo "PAR_JOBS=$NUMBER_OF_PROCESSORS" >> $GITHUB_ENV
+          elif [[ "$OSTYPE" == "darwin"* ]]; then
+            echo "PAR_JOBS=$(sysctl -n hw.logicalcpu)" >> $GITHUB_ENV
+          else
+            echo "PAR_JOBS=$(nproc)" >> $GITHUB_ENV
+          fi
+
       - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
@@ -109,7 +120,7 @@ jobs:
             -DCMAKE_CXX_STANDARD=17 \
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -DUSE_OPEN_MP=OFF
-          cmake --build . --config Release -j2
+          cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           cd ../../..
 
@@ -127,15 +138,13 @@ jobs:
             -DCMAKE_CXX_STANDARD=17 \
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -Dlibnabo_DIR=$HOME/.local/share/libnabo/cmake
-          cmake --build . --config Release -j2
+          cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           # Fix libpointmatcher include path in CMake config
           if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s|$HOME/.local/pointmatcher|$HOME/.local/include/pointmatcher|g" \
-              $HOME/.local/share/libpointmatcher/cmake/libpointmatcherConfig.cmake || true
+            find $HOME/.local/share/libpointmatcher/cmake -name "*.cmake" -print0 | xargs -0 sed -i '' "s|$HOME/.local/pointmatcher|$HOME/.local/include/pointmatcher|g"
           else
-            sed -i "s|$HOME/.local/pointmatcher|$HOME/.local/include/pointmatcher|g" \
-              $HOME/.local/share/libpointmatcher/cmake/libpointmatcherConfig.cmake || true
+            find $HOME/.local/share/libpointmatcher/cmake -name "*.cmake" -print0 | xargs -0 sed -i "s|$HOME/.local/pointmatcher|$HOME/.local/include/pointmatcher|g"
           fi
           cd ../../..
 
@@ -154,7 +163,7 @@ jobs:
             -DEIGEN_INCLUDE_DIR=$PWD/../../eigen \
             -Dlibnabo_DIR=$HOME/.local/share/libnabo/cmake \
             -DBoost_USE_STATIC_LIBS=OFF
-          cmake --build . --config Release -j2
+          cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
           cd ../../..
 

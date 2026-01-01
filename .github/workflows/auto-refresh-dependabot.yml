@@ -5,9 +5,9 @@ name: Auto-refresh Dependabot PRs
 # This helps keep dependency update PRs up to date with the latest main branch.
 
 on:
-  push:
-    # branches:
-    #   - main
+  # push:
+  # branches:
+  #   - main
   workflow_dispatch: # Allow manual triggering
 
 jobs:
