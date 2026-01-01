@@ -11,11 +11,13 @@ if (EIGEN3_FOUND OR Eigen3_FOUND)
 
   # Required registration libraries
   find_package(OpenGR REQUIRED)
+  add_definitions(-DCGAL_LINKED_WITH_OPENGR)
   message(STATUS "Found OpenGR: ${OpenGR_LIBRARIES}")
   include_directories(${OpenGR_INCLUDE_DIR})
   set(LIBSTOLINKWITH ${LIBSTOLINKWITH} ${OpenGR_LIBRARIES})
 
   find_package(libpointmatcher REQUIRED)
+  add_definitions(-DCGAL_LINKED_WITH_POINTMATCHER)
   message(STATUS "Found libpointmatcher")
   set(LIBSTOLINKWITH ${LIBSTOLINKWITH} pointmatcher)
 
