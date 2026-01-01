@@ -146,11 +146,12 @@ jobs:
             -Dlibnabo_DIR=$INSTALL_DIR/share/libnabo/cmake
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
-          # Fix libpointmatcher include path in CMake config
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-            find $INSTALL_DIR/share/libpointmatcher/cmake -name "*.cmake" -print0 | xargs -0 sed -i '' "s|$INSTALL_DIR/pointmatcher|$INSTALL_DIR/include/pointmatcher|g"
-          else
-            find $INSTALL_DIR/share/libpointmatcher/cmake -name "*.cmake" -print0 | xargs -0 sed -i "s|$INSTALL_DIR/pointmatcher|$INSTALL_DIR/include/pointmatcher|g"
+          cmake --build . --config Release -j$PAR_JOBS
+          cmake --install . --config Release
+          # Workaround: libpointmatcher CMake config points to wrong include dir
+          # Create symlink so $INSTALL_DIR/pointmatcher -> $INSTALL_DIR/include
+          if [[ "$OSTYPE" == "darwin"* ]] || [[ "$runner.os" == "Linux" ]]; then
+             ln -sf include $INSTALL_DIR/pointmatcher
           fi
           cd ../../..
 
