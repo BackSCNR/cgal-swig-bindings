@@ -15,6 +15,7 @@ jobs:
   build-wheels:
     name: Build Wheel
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -65,7 +66,7 @@ jobs:
         run: |
           conda install -y -c conda-forge boost-cpp zlib eigen mpfr numpy \
             twine delocate pycodestyle swig tbb tbb-devel wheel bzip2 \
-            yaml-cpp gmp cmake
+            gmp cmake
 
       - name: Install system dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -225,9 +226,14 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install auditwheel patchelf
-          # Set LD_LIBRARY_PATH so auditwheel can find TBB and other conda libraries
+          # Set LD_LIBRARY_PATH so auditwheel can find all libraries
           CONDA_LIB=$(conda info --base)/envs/build/lib
           export LD_LIBRARY_PATH=$CONDA_LIB:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
+          # Debug: show where libraries are
+          echo "INSTALL_DIR: $INSTALL_DIR"
+          echo "Looking for CGAL libraries:"
+          find $INSTALL_DIR -name "libCGAL*.so*" || true
+          echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
           # Let auditwheel auto-detect the appropriate manylinux platform
           auditwheel repair dist/*.whl -w fixed_wheels
           rm dist/*.whl
@@ -309,6 +315,7 @@ jobs:
     name: Test Wheel
     needs: build-wheels
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -349,6 +356,7 @@ jobs:
     name: Upload Release Wheels
     needs: [build-wheels, test-wheels]
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
 
     steps:
