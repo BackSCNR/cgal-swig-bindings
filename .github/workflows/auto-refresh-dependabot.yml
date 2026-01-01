@@ -6,8 +6,8 @@ name: Auto-refresh Dependabot PRs
 
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
   workflow_dispatch: # Allow manual triggering
 
 jobs:
