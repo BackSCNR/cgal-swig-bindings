@@ -489,7 +489,7 @@ jobs:
           assert hasattr(psp, 'register_point_sets_pointmatcher'), 'PointMatcher missing'
           assert hasattr(psp, 'ICP_config_wrapper'), 'ICP_config_wrapper missing'
           assert hasattr(psp, 'ICP_config_vector'), 'ICP_config_vector missing'
-          print('✓ All registration functions available!')
+          print('SUCCESS: All registration functions available!')
           "
 
       - name: Upload wheel artifact
