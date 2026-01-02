@@ -408,7 +408,11 @@ jobs:
           # Point to share/libpointmatcher/cmake instead of broken CMake/ location
           export libpointmatcher_DIR="$(cygpath -w $INSTALL_DIR)\\share\\libpointmatcher\\cmake"
           export CMAKE_PREFIX_PATH="${CONDA_ENV_DIR};$(cygpath -w $INSTALL_DIR)"
-          export LIB=${CONDA_ENV_DIR}\\lib
+          export LIB="${CONDA_ENV_DIR}\\lib;${LIB}"
+
+          echo "=== Debug: Checking for TBB in ${CONDA_ENV_DIR}\\lib ==="
+          ls -1 "${CONDA_ENV_DIR}/lib/" | grep tbb || echo "No tbb found in library path"
+
           CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $INSTALL_DIR/include/CGAL/version.h)
           CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
           CGAL_PYTHON_MODULE_VERSION=$CGAL_VERSION-$CGAL_SWIG_BINDINGS_VERSION

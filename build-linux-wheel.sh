@@ -193,3 +193,6 @@ auditwheel repair \
 
 echo "=== Build complete! ==="
 ls -lh wheelhouse/
+
+# Fix permissions so the host (GitHub Actions runner) can access the wheels
+chmod -R 777 wheelhouse/
