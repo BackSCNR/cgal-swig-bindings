@@ -143,6 +143,17 @@ echo ""
 echo "Libraries in $INSTALL_PREFIX/lib:"
 ls -la $INSTALL_PREFIX/lib/*.so* 2>/dev/null | head -20 || echo "No .so files found!"
 echo ""
+echo "yaml-cpp files specifically:"
+ls -la $INSTALL_PREFIX/lib/*yaml* 2>/dev/null || echo "No yaml-cpp files!"
+echo ""
+
+# Create symlink for yaml-cpp if needed (auditwheel looks for .so.0.8 but file is .so.0.8.0)
+cd $INSTALL_PREFIX/lib
+if [ -f libyaml-cpp.so.0.8.0 ] && [ ! -f libyaml-cpp.so.0.8 ]; then
+  ln -s libyaml-cpp.so.0.8.0 libyaml-cpp.so.0.8
+  echo "Created symlink libyaml-cpp.so.0.8 -> libyaml-cpp.so.0.8.0"
+fi
+cd /cgal-bindings
 
 # Exclude CGAL wrapper libraries that are already in the wheel
 # Set library path so auditwheel can find and bundle external deps (yaml-cpp, boost, etc.)

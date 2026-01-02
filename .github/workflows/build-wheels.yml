@@ -295,6 +295,15 @@ jobs:
           rm -rf $INSTALL_DIR/CMake/libpointmatcher*.cmake
           echo "Removed broken wrapper, CMake will use share/libpointmatcher/cmake"
 
+          # Create symlink for include path (same workaround as Unix)
+          # Use Windows mklink to create directory junction
+          INSTALL_DIR_WIN=$(cygpath -w $INSTALL_DIR)
+          cd $INSTALL_DIR
+          if [ ! -e pointmatcher ]; then
+            cmd //c mklink /J pointmatcher include\\pointmatcher
+            echo "Created Windows directory junction for pointmatcher includes"
+          fi
+
           cd ../../..
 
       - name: Build OpenGR
