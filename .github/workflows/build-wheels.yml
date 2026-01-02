@@ -407,15 +407,27 @@ jobs:
           export libpointmatcher_DIR="$(cygpath -w $INSTALL_DIR)\\share\\libpointmatcher\\cmake"
           export CMAKE_PREFIX_PATH="${CONDA_ENV_DIR};$(cygpath -w $INSTALL_DIR)"
 
-          # Add conda lib to LIB path for TBB and other libraries
-          export LIB="${CONDA_ENV_DIR}\\lib;${LIB}"
-
-          # TBB: Check what's available and create symlinks if needed
-          echo "=== Debug: Checking for TBB libraries ==="
+          # Set up library paths for Windows linker
+          # LIB: MSVC linker library search path
+          # PATH: Runtime DLL search path
           CONDA_LIB_UNIX=$(cygpath -u "${CONDA_ENV_DIR}\\lib")
+          CONDA_BIN_UNIX=$(cygpath -u "${CONDA_ENV_DIR}\\bin")
+
+          # Set LIB without trailing semicolon
+          if [ -n "$LIB" ]; then
+            export LIB="${CONDA_ENV_DIR}\\lib;${LIB}"
+          else
+            export LIB="${CONDA_ENV_DIR}\\lib"
+          fi
+
+          # Add to PATH for runtime DLLs
+          export PATH="$CONDA_LIB_UNIX:$CONDA_BIN_UNIX:$PATH"
+
+          # TBB: Check what's available
+          echo "=== Debug: Checking for TBB libraries ==="
           ls -1 "$CONDA_LIB_UNIX" | grep -i tbb || echo "No tbb files found"
 
-          # If tbb12.lib is missing but tbb.lib exists, create copy/symlink
+          # If tbb12.lib is missing but tbb.lib exists, create copy
           if [ ! -f "$CONDA_LIB_UNIX/tbb12.lib" ]; then
             if [ -f "$CONDA_LIB_UNIX/tbb.lib" ]; then
               echo "Creating tbb12.lib from tbb.lib"
@@ -425,8 +437,11 @@ jobs:
             fi
           fi
 
-          # Set TBB_ROOT to help CMake find TBB
+          # Set TBB_ROOT and ensure it's in CMAKE_PREFIX_PATH
           export TBB_ROOT="${CONDA_ENV_DIR}"
+
+          echo "LIB=$LIB"
+          echo "PATH=$PATH"
 
           CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $INSTALL_DIR/include/CGAL/version.h)
           CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
@@ -434,6 +449,15 @@ jobs:
           echo "Package version: $CGAL_PYTHON_MODULE_VERSION"
           export CGAL_PYTHON_MODULE_VERSION
           mkdir -p build/build-python/CGAL
+
+          # Add CMake linker flags to include conda library directory
+          CONDA_LIB_WIN=$(cygpath -w "${CONDA_ENV_DIR}\\lib")
+          export CMAKE_SHARED_LINKER_FLAGS="/LIBPATH:\"$CONDA_LIB_WIN\""
+          export CMAKE_MODULE_LINKER_FLAGS="/LIBPATH:\"$CONDA_LIB_WIN\""
+          export CMAKE_EXE_LINKER_FLAGS="/LIBPATH:\"$CONDA_LIB_WIN\""
+
+          echo "CMAKE_SHARED_LINKER_FLAGS=$CMAKE_SHARED_LINKER_FLAGS"
+
           python setup.py bdist_wheel \
             --cmake-prefix-path="${CMAKE_PREFIX_PATH}" \
             --python-executable=$(which python)
