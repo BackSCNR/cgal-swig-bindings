@@ -324,11 +324,13 @@ class my_build_ext(build_ext_orig):
         if self.tbb_include_dir is not None:
             cmake_args.append('-DTBB_INCLUDE_DIR='+self.tbb_include_dir)
         if self.tbb_lib is not None:
+            cmake_args.append('-DTBB_LIBRARY='+self.tbb_lib)
             cmake_args.append('-DTBB_LIBRARY_RELEASE='+self.tbb_lib)
         if self.tbb_malloc_include_dir is not None:
-            cmake_args.append('-DTBB_MALLOC_LIBRARY_RELEASE='+self.tbb_malloc_include_dir)
+            cmake_args.append('-DTBB_MALLOC_INCLUDE_DIR='+self.tbb_malloc_include_dir)
         if self.tbb_malloc_lib is not None:
-            cmake_args.append('-DTBB_MALLOC_INCLUDE_DIR='+self.tbb_malloc_lib)
+            cmake_args.append('-DTBB_MALLOC_LIBRARY='+self.tbb_malloc_lib)
+            cmake_args.append('-DTBB_MALLOC_LIBRARY_RELEASE='+self.tbb_malloc_lib)
         if self.boost_serialization_lib is not None:
             cmake_args.append('-DBoost_SERIALIZATION_LIBRARY_RELEASE='+self.boost_serialization_lib)
         if self.boost_iostreams_lib is not None:
