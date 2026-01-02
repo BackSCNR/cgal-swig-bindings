@@ -175,19 +175,22 @@ ls -la $YAML_DIR/libyaml-cpp*
 
 cd /cgal-bindings
 
-# Exclude CGAL wrapper libraries that are already in the wheel
-# Set library path so auditwheel can find and bundle external deps (yaml-cpp, boost, etc.)
+# Extract CGAL wrapper libraries from wheel so auditwheel can find them
+# This allows auditwheel to set up RPATH correctly for runtime loading
+echo "=== Extracting CGAL wrapper libraries from wheel ==="
+mkdir -p /tmp/cgal-libs
+unzip -j dist/*.whl 'CGAL/*.so' -d /tmp/cgal-libs/ 2>/dev/null || echo "No CGAL .so files found in wheel"
+ls -la /tmp/cgal-libs/
+# Copy to install prefix so auditwheel can find them
+cp /tmp/cgal-libs/*.so $INSTALL_PREFIX/lib/ 2>/dev/null || echo "No libraries to copy"
+
+# Set library path so auditwheel can find all dependencies
 export LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
 echo "Final LD_LIBRARY_PATH before auditwheel: $LD_LIBRARY_PATH"
 echo ""
+
+# Repair wheel - auditwheel can now find CGAL wrapper libs and set up RPATH correctly
 auditwheel repair \
-  --exclude libCGAL_AABB_tree_cpp.so \
-  --exclude libCGAL_Alpha_shape_2_cpp.so \
-  --exclude libCGAL_Kernel_cpp.so \
-  --exclude libCGAL_Mesh_3_cpp.so \
-  --exclude libCGAL_Surface_mesher_cpp.so \
-  --exclude libCGAL_Triangulation_2_cpp.so \
-  --exclude libCGAL_Triangulation_3_cpp.so \
   --lib-sdir .libs \
   dist/*.whl -w wheelhouse
 
