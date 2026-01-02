@@ -147,17 +147,39 @@ echo "yaml-cpp files specifically:"
 ls -la $INSTALL_PREFIX/lib/*yaml* 2>/dev/null || echo "No yaml-cpp files!"
 echo ""
 
-# Create symlink for yaml-cpp if needed (auditwheel looks for .so.0.8 but file is .so.0.8.0)
-cd $INSTALL_PREFIX/lib
-if [ -f libyaml-cpp.so.0.8.0 ] && [ ! -f libyaml-cpp.so.0.8 ]; then
-  ln -s libyaml-cpp.so.0.8.0 libyaml-cpp.so.0.8
-  echo "Created symlink libyaml-cpp.so.0.8 -> libyaml-cpp.so.0.8.0"
+# Robustly find yaml-cpp and create symlink if needed
+# auditwheel needs SONAME version (0.8) which might be missing if only 0.8.0 exists
+YAML_LIB=$(find $INSTALL_PREFIX -name "libyaml-cpp.so.0.8*" | head -n 1)
+if [ -z "$YAML_LIB" ]; then
+  echo "ERROR: Could not find any libyaml-cpp library in $INSTALL_PREFIX"
+  # List contents to help debugging
+  ls -R $INSTALL_PREFIX/lib*
+  exit 1
 fi
+
+YAML_DIR=$(dirname "$YAML_LIB")
+echo "Found yaml-cpp in: $YAML_DIR"
+
+# Ensure SONAME symlink exists
+if [ ! -e "$YAML_DIR/libyaml-cpp.so.0.8" ]; then
+  echo "Creating missing symlink for auditwheel: libyaml-cpp.so.0.8"
+  ln -sf "$(basename $YAML_LIB)" "$YAML_DIR/libyaml-cpp.so.0.8"
+fi
+
+# Export LD_LIBRARY_PATH ensuring we include the actual lib dir (lib or lib64)
+export LD_LIBRARY_PATH=$YAML_DIR:$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
+echo "Final LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+
+# Verify
+ls -la $YAML_DIR/libyaml-cpp*
+
 cd /cgal-bindings
 
 # Exclude CGAL wrapper libraries that are already in the wheel
 # Set library path so auditwheel can find and bundle external deps (yaml-cpp, boost, etc.)
 export LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
+echo "Final LD_LIBRARY_PATH before auditwheel: $LD_LIBRARY_PATH"
+echo ""
 auditwheel repair \
   --exclude libCGAL_AABB_tree_cpp.so \
   --exclude libCGAL_Alpha_shape_2_cpp.so \

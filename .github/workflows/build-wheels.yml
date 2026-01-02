@@ -295,25 +295,20 @@ jobs:
           rm -rf $INSTALL_DIR/CMake/libpointmatcher*.cmake
           echo "Removed broken wrapper, CMake will use share/libpointmatcher/cmake"
 
-          # Create symlink for include path (same workaround as Unix)
-          # Use Windows mklink to create directory junction
-          echo "=== Creating pointmatcher junction ==="
-          INSTALL_DIR_WIN=$(cygpath -w $INSTALL_DIR)
-          echo "INSTALL_DIR: $INSTALL_DIR"
-          echo "INSTALL_DIR_WIN: $INSTALL_DIR_WIN"
-          ls -la $INSTALL_DIR/include/ | grep pointmatcher || echo "No pointmatcher in include/"
-
-          cd $INSTALL_DIR
-          if [ ! -e pointmatcher ]; then
-            # Use Windows path format for mklink
-            cmd //c "mklink /J \"${INSTALL_DIR_WIN}\\pointmatcher\" \"${INSTALL_DIR_WIN}\\include\\pointmatcher\""
-            echo "Created junction at ${INSTALL_DIR_WIN}\\pointmatcher"
+          # Create include directory copy to satisfy libpointmatcher's incorrect interface include path
+          # It exports "${_IMPORT_PREFIX}/pointmatcher" which resolves to "$INSTALL_DIR/pointmatcher"
+          # but headers are actually in "$INSTALL_DIR/include/pointmatcher"
+          echo "=== Creating pointmatcher include copy ==="
+          if [ -d "$INSTALL_DIR/include/pointmatcher" ]; then
+             echo "Copying include/pointmatcher to pointmatcher..."
+             cp -r "$INSTALL_DIR/include/pointmatcher" "$INSTALL_DIR/pointmatcher"
+             echo "Copy verified:"
+             ls -la "$INSTALL_DIR/pointmatcher"
           else
-            echo "Junction already exists"
+             echo "ERROR: $INSTALL_DIR/include/pointmatcher does not exist!"
+             ls -la "$INSTALL_DIR/include"
+             exit 1
           fi
-
-          # Verify junction was created
-          ls -la pointmatcher 2>/dev/null && echo "Junction verified!" || echo "Junction creation failed!"
 
           cd ../../..
 
