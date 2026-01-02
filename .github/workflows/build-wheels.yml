@@ -288,14 +288,6 @@ jobs:
             -DCMAKE_CXX_FLAGS="/EHsc /DWIN32 /D_WINDOWS /W3 /GR /D_CRT_SECURE_NO_WARNINGS -DBOOST_TIMER_ENABLE_DEPRECATED"
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
-
-          # Fix: libpointmatcherConfig.cmake in CMake/ tries to include files from share/
-          # Copy the missing config files to where they're expected
-          echo "=== Fixing libpointmatcher CMake config paths ==="
-          cp $INSTALL_DIR/share/libpointmatcher/cmake/libpointmatcher-config.cmake $INSTALL_DIR/CMake/
-          cp $INSTALL_DIR/share/libpointmatcher/cmake/libpointmatcher-config-release.cmake $INSTALL_DIR/CMake/
-          echo "Copied config files to CMake/ directory"
-
           cd ../../..
 
       - name: Build OpenGR
@@ -391,6 +383,8 @@ jobs:
           set -ex
           CONDA_ENV_DIR=$(conda env list --json | jq -r '.envs | .[] | select(test("build"))')
           CONDA_ENV_DIR="$CONDA_ENV_DIR\\Library"
+          # Point to share/libpointmatcher/cmake instead of broken CMake/ location
+          export libpointmatcher_DIR="$(cygpath -w $INSTALL_DIR)\\share\\libpointmatcher\\cmake"
           export CMAKE_PREFIX_PATH="${CONDA_ENV_DIR};$(cygpath -w $INSTALL_DIR)"
           export LIB=${CONDA_ENV_DIR}\\lib
           CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $INSTALL_DIR/include/CGAL/version.h)

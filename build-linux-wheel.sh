@@ -144,7 +144,17 @@ echo "Libraries in $INSTALL_PREFIX/lib:"
 ls -la $INSTALL_PREFIX/lib/*.so* 2>/dev/null | head -20 || echo "No .so files found!"
 echo ""
 
-auditwheel repair dist/*.whl -w wheelhouse
+# Exclude CGAL wrapper libraries that are already in the wheel
+# auditwheel doesn't know these are already bundled in lib/ directory
+auditwheel repair \
+  --exclude libCGAL_AABB_tree_cpp.so \
+  --exclude libCGAL_Alpha_shape_2_cpp.so \
+  --exclude libCGAL_Kernel_cpp.so \
+  --exclude libCGAL_Mesh_3_cpp.so \
+  --exclude libCGAL_Surface_mesher_cpp.so \
+  --exclude libCGAL_Triangulation_2_cpp.so \
+  --exclude libCGAL_Triangulation_3_cpp.so \
+  dist/*.whl -w wheelhouse
 
 echo "=== Build complete! ==="
 ls -lh wheelhouse/
