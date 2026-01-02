@@ -178,11 +178,28 @@ cd /cgal-bindings
 # Extract CGAL wrapper libraries from wheel so auditwheel can find them
 # This allows auditwheel to set up RPATH correctly for runtime loading
 echo "=== Extracting CGAL wrapper libraries from wheel ==="
+echo "Wheel contents:"
+unzip -l dist/*.whl | grep '\.so'
+echo ""
+
 mkdir -p /tmp/cgal-libs
-unzip -j dist/*.whl 'CGAL/*.so' -d /tmp/cgal-libs/ 2>/dev/null || echo "No CGAL .so files found in wheel"
-ls -la /tmp/cgal-libs/
+# Extract all .so files that start with 'lib' (wrapper libraries, not Python extensions)
+unzip -j dist/*.whl 'CGAL/lib*.so' -d /tmp/cgal-libs/ || echo "Pattern CGAL/lib*.so found nothing"
+# Try alternate locations
+unzip -j dist/*.whl '*/lib*.so' -d /tmp/cgal-libs/ || echo "Pattern */lib*.so found nothing"
+unzip -j dist/*.whl 'lib*.so' -d /tmp/cgal-libs/ || echo "Pattern lib*.so found nothing"
+
+echo "Extracted libraries:"
+ls -la /tmp/cgal-libs/ || echo "Directory empty"
+echo ""
+
 # Copy to install prefix so auditwheel can find them
-cp /tmp/cgal-libs/*.so $INSTALL_PREFIX/lib/ 2>/dev/null || echo "No libraries to copy"
+if ls /tmp/cgal-libs/*.so 1> /dev/null 2>&1; then
+  cp /tmp/cgal-libs/*.so $INSTALL_PREFIX/lib/
+  echo "Copied CGAL wrapper libraries to $INSTALL_PREFIX/lib"
+else
+  echo "WARNING: No CGAL wrapper libraries found to extract!"
+fi
 
 # Set library path so auditwheel can find all dependencies
 export LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH

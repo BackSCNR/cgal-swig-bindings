@@ -406,10 +406,27 @@ jobs:
           # Point to share/libpointmatcher/cmake instead of broken CMake/ location
           export libpointmatcher_DIR="$(cygpath -w $INSTALL_DIR)\\share\\libpointmatcher\\cmake"
           export CMAKE_PREFIX_PATH="${CONDA_ENV_DIR};$(cygpath -w $INSTALL_DIR)"
+
+          # Add conda lib to LIB path for TBB and other libraries
           export LIB="${CONDA_ENV_DIR}\\lib;${LIB}"
 
-          echo "=== Debug: Checking for TBB in ${CONDA_ENV_DIR}\\lib ==="
-          ls -1 "${CONDA_ENV_DIR}/lib/" | grep tbb || echo "No tbb found in library path"
+          # TBB: Check what's available and create symlinks if needed
+          echo "=== Debug: Checking for TBB libraries ==="
+          CONDA_LIB_UNIX=$(cygpath -u "${CONDA_ENV_DIR}\\lib")
+          ls -1 "$CONDA_LIB_UNIX" | grep -i tbb || echo "No tbb files found"
+
+          # If tbb12.lib is missing but tbb.lib exists, create copy/symlink
+          if [ ! -f "$CONDA_LIB_UNIX/tbb12.lib" ]; then
+            if [ -f "$CONDA_LIB_UNIX/tbb.lib" ]; then
+              echo "Creating tbb12.lib from tbb.lib"
+              cp "$CONDA_LIB_UNIX/tbb.lib" "$CONDA_LIB_UNIX/tbb12.lib"
+            else
+              echo "WARNING: Neither tbb12.lib nor tbb.lib found!"
+            fi
+          fi
+
+          # Set TBB_ROOT to help CMake find TBB
+          export TBB_ROOT="${CONDA_ENV_DIR}"
 
           CGAL_VERSION=$(perl -lan -e 'if(/CGAL_VERSION /) { $v=@F[2]; $v =~ s/-.*//; print "$v" }' $INSTALL_DIR/include/CGAL/version.h)
           CGAL_SWIG_BINDINGS_VERSION=$(git show --no-patch --format='format:%ad' --date=format:'%Y%m%d')
