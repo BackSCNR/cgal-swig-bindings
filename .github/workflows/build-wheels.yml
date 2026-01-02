@@ -350,13 +350,11 @@ jobs:
 
           # Use Docker manylinux container with custom build script
           docker pull quay.io/pypa/manylinux2014_x86_64
-          docker run --rm \
-            -v$INSTALL_DIR:/cgal \
-            -v${PWD}:/cgal-bindings \
-            -eCGAL_PYTHON_MODULE_VERSION=$CGAL_PYTHON_MODULE_VERSION \
-            -ePYTHON_VERSION_MINOR=$(python -c "import sys; print(sys.version_info.minor)") \
-            quay.io/pypa/manylinux2014_x86_64 \
-            /cgal-bindings/build-linux-wheel.sh
+          docker run --rm -v ${{ github.workspace }}:/cgal-bindings -v ${{ github.workspace }}/external/install:/build/install -e PAR_JOBS=$PAR_JOBS -e PYTHON_VERSION_MINOR=$(python -c "import sys; print(sys.version_info.minor)") -e CGAL_PYTHON_MODULE_VERSION=$CGAL_PYTHON_MODULE_VERSION quay.io/pypa/manylinux2014_x86_64 /cgal-bindings/build-linux-wheel.sh
+
+          # Reclaim ownership of all files created by Docker (root)
+          echo "=== Reclaiming workspace ownership ==="
+          sudo chown -R $(id -u):$(id -g) .
 
           # Move wheel from wheelhouse to dist
           mkdir -p dist
