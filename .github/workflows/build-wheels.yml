@@ -288,6 +288,13 @@ jobs:
             -DCMAKE_CXX_FLAGS="/EHsc /DWIN32 /D_WINDOWS /W3 /GR /D_CRT_SECURE_NO_WARNINGS -DBOOST_TIMER_ENABLE_DEPRECATED"
           cmake --build . --config Release -j$PAR_JOBS
           cmake --install . --config Release
+
+          # Remove broken CMake/ wrapper that has hardcoded paths
+          # CMake will use the correct one from share/libpointmatcher/cmake
+          echo "=== Removing broken libpointmatcher wrapper ==="
+          rm -rf $INSTALL_DIR/CMake/libpointmatcher*.cmake
+          echo "Removed broken wrapper, CMake will use share/libpointmatcher/cmake"
+
           cd ../../..
 
       - name: Build OpenGR

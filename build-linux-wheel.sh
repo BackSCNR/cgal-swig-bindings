@@ -145,7 +145,8 @@ ls -la $INSTALL_PREFIX/lib/*.so* 2>/dev/null | head -20 || echo "No .so files fo
 echo ""
 
 # Exclude CGAL wrapper libraries that are already in the wheel
-# auditwheel doesn't know these are already bundled in lib/ directory
+# Set library path so auditwheel can find and bundle external deps (yaml-cpp, boost, etc.)
+export LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
 auditwheel repair \
   --exclude libCGAL_AABB_tree_cpp.so \
   --exclude libCGAL_Alpha_shape_2_cpp.so \
@@ -154,6 +155,7 @@ auditwheel repair \
   --exclude libCGAL_Surface_mesher_cpp.so \
   --exclude libCGAL_Triangulation_2_cpp.so \
   --exclude libCGAL_Triangulation_3_cpp.so \
+  --lib-sdir .libs \
   dist/*.whl -w wheelhouse
 
 echo "=== Build complete! ==="
