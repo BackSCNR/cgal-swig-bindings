@@ -297,12 +297,23 @@ jobs:
 
           # Create symlink for include path (same workaround as Unix)
           # Use Windows mklink to create directory junction
+          echo "=== Creating pointmatcher junction ==="
           INSTALL_DIR_WIN=$(cygpath -w $INSTALL_DIR)
+          echo "INSTALL_DIR: $INSTALL_DIR"
+          echo "INSTALL_DIR_WIN: $INSTALL_DIR_WIN"
+          ls -la $INSTALL_DIR/include/ | grep pointmatcher || echo "No pointmatcher in include/"
+
           cd $INSTALL_DIR
           if [ ! -e pointmatcher ]; then
-            cmd //c mklink /J pointmatcher include\\pointmatcher
-            echo "Created Windows directory junction for pointmatcher includes"
+            # Use Windows path format for mklink
+            cmd //c "mklink /J \"${INSTALL_DIR_WIN}\\pointmatcher\" \"${INSTALL_DIR_WIN}\\include\\pointmatcher\""
+            echo "Created junction at ${INSTALL_DIR_WIN}\\pointmatcher"
+          else
+            echo "Junction already exists"
           fi
+
+          # Verify junction was created
+          ls -la pointmatcher 2>/dev/null && echo "Junction verified!" || echo "Junction creation failed!"
 
           cd ../../..
 
