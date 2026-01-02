@@ -134,6 +134,16 @@ $PYTHON_BIN setup.py bdist_wheel \
 echo "=== Repairing wheel with auditwheel ==="
 $PYTHON_BIN -m pip install auditwheel patchelf
 
+# Debug: Show what's in the wheel
+echo "=== Debugging wheel contents ==="
+unzip -l dist/*.whl | grep '\.so' || echo "No .so files in wheel!"
+echo ""
+echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+echo ""
+echo "Libraries in $INSTALL_PREFIX/lib:"
+ls -la $INSTALL_PREFIX/lib/*.so* 2>/dev/null | head -20 || echo "No .so files found!"
+echo ""
+
 auditwheel repair dist/*.whl -w wheelhouse
 
 echo "=== Build complete! ==="
