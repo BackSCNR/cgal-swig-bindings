@@ -18,9 +18,9 @@ try:
     from CGAL.CGAL_Kernel import Point_3, Vector_3
     from CGAL.CGAL_Point_set_3 import Point_set_3
     from CGAL.CGAL_Point_set_processing_3 import *
-    print("✓ All basic imports successful")
+    print("SUCCESS: All basic imports successful")
 except ImportError as e:
-    print(f"✗ Import failed: {e}")
+    print(f"FAILED: Import failed: {e}")
     sys.exit(1)
 
 # Test basic Point_set_processing_3 functions
@@ -38,15 +38,15 @@ try:
 
     # Test normal estimation
     pca_estimate_normals(ps, 3)
-    print(f"  ✓ Normal estimation works")
+    print(f"  OK: Normal estimation works")
 
     # Test average spacing
     spacing = compute_average_spacing(ps, 3)
-    print(f"  ✓ Average spacing: {spacing:.4f}")
+    print(f"  OK: Average spacing: {spacing:.4f}")
 
-    print("✓ Basic functions work correctly")
+    print("SUCCESS: Basic functions work correctly")
 except Exception as e:
-    print(f"✗ Error testing basic functions: {e}")
+    print(f"FAILED: Error testing basic functions: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
@@ -58,36 +58,36 @@ print("\n3. Checking registration function availability...")
 try:
     # Try to access the function
     register_point_sets_opengr
-    print("  ✓ register_point_sets_opengr is available")
+    print("  OK: register_point_sets_opengr is available")
     opengr_available = True
 except NameError:
-    print("  ✗ register_point_sets_opengr is NOT available")
+    print("  MISSING: register_point_sets_opengr is NOT available")
     print("    (OpenGR library was not found during compilation)")
     opengr_available = False
 
 # Check for PointMatcher
 try:
     register_point_sets_pointmatcher
-    print("  ✓ register_point_sets_pointmatcher is available")
+    print("  OK: register_point_sets_pointmatcher is available")
     pointmatcher_available = True
 except NameError:
-    print("  ✗ register_point_sets_pointmatcher is NOT available")
+    print("  MISSING: register_point_sets_pointmatcher is NOT available")
     print("    (libpointmatcher library was not found during compilation)")
     pointmatcher_available = False
 
 # Check for ICP_config_wrapper
 try:
     ICP_config_wrapper
-    print("  ✓ ICP_config_wrapper class is available")
+    print("  OK: ICP_config_wrapper class is available")
 except NameError:
-    print("  ✗ ICP_config_wrapper class is NOT available")
+    print("  MISSING: ICP_config_wrapper class is NOT available")
 
 print("\n" + "=" * 60)
 print("Summary:")
 print("=" * 60)
-print(f"Basic Point Set Processing: ✓ Working")
-print(f"OpenGR Registration:        {'✓ Available' if opengr_available else '✗ Not Available'}")
-print(f"PointMatcher Registration:  {'✓ Available' if pointmatcher_available else '✗ Not Available'}")
+print(f"Basic Point Set Processing: OK - Working")
+print(f"OpenGR Registration:        {'OK - Available' if opengr_available else 'MISSING - Not Available'}")
+print(f"PointMatcher Registration:  {'OK - Available' if pointmatcher_available else 'MISSING - Not Available'}")
 
 if not (opengr_available or pointmatcher_available):
     print("\nNote: Registration functions are not available because")
